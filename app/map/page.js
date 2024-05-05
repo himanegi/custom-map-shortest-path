@@ -1,8 +1,9 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import createAdjacencyList from "../utils/adjacencyList.js";
 import dijkstra from "../utils/dijkstra.js";
 
 const Map = ({ myPoints }) => {
+  const [, setRender] = useState(0); // State to trigger re-render
   const locations = {
     Uptron: { lat: 25.495888259522516, lon: 81.86993608590821 },
     "Teliyarganj Chauraha": { lat: 25.49861488542562, lon: 81.86312708481141 },
@@ -47,7 +48,7 @@ const Map = ({ myPoints }) => {
 
   const adjacencyList = createAdjacencyList(locations);
 
-  const path = dijkstra(adjacencyList, "APS Old Cantt", "CA Park");
+  const path = dijkstra(adjacencyList, "Teliyarganj Chauraha", "CA Park");
 
   let allPaths = [];
   path.forEach((name) => {
@@ -56,8 +57,7 @@ const Map = ({ myPoints }) => {
   console.log("type:", typeof allPaths);
 
   const canvasRef = useRef(null);
-
-  useEffect(() => {
+  const drawMap = () => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -66,7 +66,7 @@ const Map = ({ myPoints }) => {
     ctx.translate(canvas.width / 2, canvas.height / 2);
 
     // Rotate the context by 90 degrees
-    ctx.rotate((3 * Math.PI) / 4);
+    ctx.rotate((3 * Math.PI) / 2);
 
     // Translate back
     ctx.translate(-canvas.width / 2, -canvas.height / 2);
@@ -141,13 +141,49 @@ const Map = ({ myPoints }) => {
       );
     });
     ctx.stroke();
-  }, []);
 
+    // Draw the source marker
+    const sourceX = (allPaths[0][0] - mapCenterX) * scale + canvas.width / 2;
+    const sourceY = (allPaths[0][1] - mapCenterY) * scale + canvas.height / 2;
+    ctx.fillStyle = "green";
+    ctx.beginPath();
+    ctx.arc(sourceX, sourceY, 8, 0, 2 * Math.PI);
+    ctx.fill();
+
+    // Draw the destination marker
+    const destX =
+      (allPaths[allPaths.length - 1][0] - mapCenterX) * scale +
+      canvas.width / 2;
+    const destY =
+      (allPaths[allPaths.length - 1][1] - mapCenterY) * scale +
+      canvas.height / 2;
+    ctx.fillStyle = "red";
+    ctx.beginPath();
+    ctx.arc(destX, destY, 8, 0, 2 * Math.PI);
+    ctx.fill();
+  };
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    canvas.width = 1000;
+    canvas.height = 1200;
+
+    drawMap();
+  }, [myPoints, allPaths]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setRender((prevRender) => prevRender + 1); // Trigger re-render
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
   return (
     <canvas
       ref={canvasRef}
-      width="700"
-      height="700"
       className="bg-white shadow-md rounded-lg transition-all duration-300 hover:ring-2 hover:ring-indigo-500"
     />
   );
